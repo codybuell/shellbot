@@ -8,8 +8,8 @@ local ns_vimbot = vim.api.nvim_create_namespace("vimbot")
 
 local nbsp = ' '
 local roles = {
-  USER = " 🤓 «" .. os.getenv('USER') .. "»" .. nbsp,
-  ASSISTANT = " 🤖 «vimbot»" .. nbsp,
+  USER = nbsp .. "🤓 «" .. os.getenv('USER') .. "»" .. nbsp,
+  ASSISTANT = nbsp .. "🤖 «vimbot»" .. nbsp,
 }
 
 local buffer_sync_cursor = {}
@@ -99,9 +99,9 @@ function ChatGPTSubmit()
   local function get_transcript(separator)
     local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
     for i, line in ipairs(lines) do
-      if line:match("^ 🤓") then  -- '^' means start of line
+      if line:match('^' .. nbsp .. '🤓') then  -- '^' means start of line
         lines[i] = separator .. "USER" .. separator
-      elseif line:match("^ 🤖") then
+      elseif line:match('^' .. nbsp ..'🤖') then
         lines[i] = separator .. "ASSISTANT" .. separator
       end
     end
