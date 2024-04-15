@@ -172,7 +172,7 @@ end
 function M.chatgpt()
   vim.cmd("botright vnew")
   vim.cmd("set winfixwidth")
-  vim.cmd("vertical resize 60")
+  vim.cmd("vertical resize 80")
   ChatGPTInit()
 end
 
