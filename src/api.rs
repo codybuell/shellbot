@@ -8,7 +8,8 @@ use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc::{self, Receiver, Sender};
 
 // const MODEL: &str = "gpt-3.5-turbo";
-const MODEL: &str = "gpt-4";
+// const MODEL: &str = "gpt-4";
+const MODEL: &str = "gpt-4o";
 pub fn stream_response<'a>(api_key: &str, messages: Vec<ChatMessage>) -> Receiver<String> {
     let client = get_client(api_key, messages);
     let (sender, receiver) = mpsc::channel(100);
