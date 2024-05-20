@@ -165,8 +165,8 @@ function ChatGPTInit()
   for _, mode in ipairs(modes) do
     vim.api.nvim_buf_set_keymap(bufnr, mode, '<C-Enter>', '<ESC>:lua ChatGPTSubmit()<CR>',
       { noremap = true, silent = true })
-    vim.api.nvim_buf_set_keymap(bufnr, mode, '<C-o>', '<ESC>:lua ChatGPTNewBuf()<CR>',
-      { noremap = true, silent = true })
+    -- vim.api.nvim_buf_set_keymap(bufnr, mode, '<C-o>', '<ESC>:lua ChatGPTNewBuf()<CR>',
+    --   { noremap = true, silent = true })
   end
 end
 
