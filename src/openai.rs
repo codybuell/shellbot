@@ -6,10 +6,13 @@ use serde::{Deserialize, Serialize};
 
 const MODEL: &str = "gpt-4o";
 pub fn get_request(api_key: &str, model: &str, request: ChatRequest) -> RequestBuilder {
-    let mut messages = vec![ChatMessage {
-        role: ChatRole::System,
-        content: request.system_prompt,
-    }];
+    let mut messages = vec![];
+    if model != "o1-preview" && model != "o1-mini" {
+        messages.push(ChatMessage {
+            role: ChatRole::System,
+            content: request.system_prompt,
+        });
+    }
     messages.extend_from_slice(&request.transcript);
     let client = Client::new();
     let url = "https://api.openai.com/v1/chat/completions";
