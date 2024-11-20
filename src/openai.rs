@@ -5,7 +5,7 @@ use reqwest::{Client, RequestBuilder};
 use serde::{Deserialize, Serialize};
 
 const MODEL: &str = "gpt-4o";
-pub fn get_request(api_key: &str, request: ChatRequest) -> RequestBuilder {
+pub fn get_request(api_key: &str, model: &str, request: ChatRequest) -> RequestBuilder {
     let mut messages = vec![ChatMessage {
         role: ChatRole::System,
         content: request.system_prompt,
@@ -23,7 +23,11 @@ pub fn get_request(api_key: &str, request: ChatRequest) -> RequestBuilder {
         HeaderValue::from_str(&format!("Bearer {}", api_key)).unwrap(),
     );
     let request = RequestJSON {
-        model: MODEL.to_string(),
+        model: if model.is_empty() {
+            MODEL.to_string()
+        } else {
+            model.to_string()
+        },
         stream: true,
         messages,
     };

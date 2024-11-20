@@ -38,8 +38,16 @@ async fn main() {
     }
     let request = structure_input();
     let provider = std::env::var("ANTHROPIC_API_KEY")
-        .map(ApiProvider::Anthropic)
-        .or_else(|_| std::env::var("OPENAI_API_KEY").map(ApiProvider::OpenAI))
+        .map(|key| {
+            let model = std::env::var("ANTHROPIC_MODEL").unwrap_or_default();
+            ApiProvider::Anthropic(key, model)
+        })
+        .or_else(|_| {
+            std::env::var("OPENAI_API_KEY").map(|key| {
+                let model = std::env::var("OPENAI_MODEL").unwrap_or_default();
+                ApiProvider::OpenAI(key, model)
+            })
+        })
         .unwrap_or_else(|_| panic!("No API key provided"));
     let mut receiver = stream_response(provider, request);
 
