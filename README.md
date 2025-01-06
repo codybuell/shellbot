@@ -17,7 +17,11 @@ The Rust program can be built with `cargo build`. It expects an `OPENAI_API_KEY`
 ===USER===
 ```
 
-If a transcript does not start with a System section, then the default System prompt is used.
+If a transcript does not start with a System section, then the default System prompt is used. The default prompt can be customized with contents from a file passed as a first argument to the executable.
+
+To override the default Anthropic model (`claude-3-5-sonnet-20241022`), specify the desired model via the `ANTHROPIC_MODEL` environment variable.
+
+To override the default OpenAI model (`gpt-4o`), set the `OPENAPI_MODEL` environment variable to the desired value.
 
 ## Installation
 
@@ -68,11 +72,11 @@ Plugin 'wolffiex/shellbot'
 
 After installation, run `:!cargo build` in the plugin directory.
 
-## Commands
+## Neovim commands
 
 ### `:Shellbot`
 
-The plugin defines a `:Shellbot` command that locates the Rust binary through the `SHELLBOT` environment variable. This should be set to the absolute path of the rust binary built in the step above.
+The plugin defines a `:Shellbot` command that locates the Rust binary through the `SHELLBOT` environment variable. This should be set to the absolute path of the Rust binary built in the step above.
 
 This plugin is optimized to allow for streaming. It attempts to keep new input in view by repositioning the cursor at the end of the buffer as new text is appended. The plugin takes care to work in the case that the user switches away from the window where the response is coming in. To turn off the cursor movement while a response is streaming, hit "Enter" or "Space." This will free the cursor for the rest of the response.
 
