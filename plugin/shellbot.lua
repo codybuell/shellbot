@@ -1,4 +1,4 @@
-vim.api.nvim_create_user_command('ChatGPT', function()
+vim.api.nvim_create_user_command('Shellbot', function()
   local shellbot = require('chatbot')
   local env = vim.env['SHELLBOT']
   if env ~= nil then
