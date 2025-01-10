@@ -97,7 +97,7 @@ function ChatBotSubmit()
   local function get_transcript()
     local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
     for i, line in ipairs(lines) do
-      if line:match("^◭") then -- '^' means start of line
+      if line:match('^' .. nbsp .. '🤓') then  -- '^' means start of line
         lines[i] = separator .. "USER" .. separator
       elseif line:match('^' .. nbsp ..'🤖') then
         lines[i] = separator .. "ASSISTANT" .. separator
@@ -212,21 +212,8 @@ function ChatBotInit()
   local winnr = vim.api.nvim_get_current_win()
   local bufnr = vim.api.nvim_get_current_buf()
   buffer_sync_cursor[bufnr] = true
-  vim.wo.breakindent = true
-  vim.wo.wrap = true
-  vim.wo.linebreak = true
-  vim.api.nvim_buf_set_option(bufnr, 'filetype', 'shellbot')
-  vim.api.nvim_buf_set_option(bufnr, 'buftype', 'nofile')
-  vim.api.nvim_buf_set_option(bufnr, 'buflisted', true)
-  vim.api.nvim_buf_set_option(bufnr, 'modified', false)
+  vim.api.nvim_set_option_value('filetype', 'shellbot', { buf = bufnr })
   add_transcript_header(winnr, bufnr, "USER", 0)
-  local modes = { 'n', 'i' }
-  for _, mode in ipairs(modes) do
-    vim.api.nvim_buf_set_keymap(bufnr, mode, '<C-Enter>', '<ESC>:lua ChatBotSubmit()<CR>',
-      { noremap = true, silent = true })
-    -- vim.api.nvim_buf_set_keymap(bufnr, mode, '<C-o>', '<ESC>:lua ChatBotNewBuf()<CR>',
-    --   { noremap = true, silent = true })
-  end
 end
 
 function M.chatbot()
