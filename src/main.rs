@@ -1,18 +1,47 @@
+mod anthropic;
 mod api;
-use api::{stream_response, ChatMessage, ChatRole};
+mod openai;
+mod sse;
 
+use api::{stream_response, ApiProvider, ChatMessage, ChatRequest, ChatRole};
+
+use log::debug;
+use log::LevelFilter;
+use std::fs::File;
 use std::io::{stdin, Read};
-use std::str::Lines;
 use tokio;
 use tokio::io::{stdout, AsyncWriteExt};
 
 #[tokio::main]
 async fn main() {
-    let api_key = std::env::var("OPENAI_API_KEY").expect("No API key provided");
-    let messages = structure_input();
-    // println!("{:?}", messages);
-
-    let mut receiver = stream_response(&api_key, messages);
+    if let Ok(log_file_path) = std::env::var("SHELLBOT_LOG_FILE") {
+        log4rs::init_config(
+            log4rs::config::Config::builder()
+                .appender(
+                    log4rs::config::Appender::builder().build(
+                        "file",
+                        Box::new(
+                            log4rs::append::file::FileAppender::builder()
+                                .build(log_file_path)
+                                .unwrap(),
+                        ),
+                    ),
+                )
+                .build(
+                    log4rs::config::Root::builder()
+                        .appender("file")
+                        .build(LevelFilter::Debug),
+                )
+                .unwrap(),
+        )
+        .unwrap();
+    }
+    let request = structure_input();
+    let provider = std::env::var("ANTHROPIC_API_KEY")
+        .map(ApiProvider::Anthropic)
+        .or_else(|_| std::env::var("OPENAI_API_KEY").map(ApiProvider::OpenAI))
+        .unwrap_or_else(|_| panic!("No API key provided"));
+    let mut receiver = stream_response(provider, request);
 
     let mut out = stdout();
     while let Some(token) = receiver.recv().await {
@@ -20,66 +49,86 @@ async fn main() {
         out.flush().await.unwrap();
     }
     // Append newline to end of output
-    println!();
+    out.write_all(b"\n").await.unwrap();
 }
 
-fn get_prompt() -> ChatMessage {
-    let default_prompt = vec![
+fn get_default_prompt() -> String {
+    vec![
         "You are a helpful assistant who provides brief explanations and short code snippets",
-        "for linux command-line tools and languages like neovim, Docker, rust and python.",
+        "for linux command-line tools and languages like neovim, Docker, Rust and Python.",
         "Your user is an expert programmer. You do not show lengthy steps or setup instructions.",
-    ]
-    .join(" ");
-    let prompt = std::env::var("SHELLBOT_PROMPT").unwrap_or(default_prompt);
-    return ChatMessage {
-        role: ChatRole::System,
-        content: prompt,
-    };
+        "Only provide answers in cases where you know the answer. Feel free to say \"I don't know.\"",
+        "Do not suggest contacting support."
+    ].join(" ")
 }
 
-fn structure_input() -> Vec<ChatMessage> {
+fn structure_input() -> ChatRequest {
     let mut input = String::new();
     stdin().read_to_string(&mut input).unwrap();
-    let mut lines_iter = input.lines();
-    let first_line = lines_iter.next().unwrap();
-    match match_separator(first_line) {
-        None => vec![
-            get_prompt(),
-            ChatMessage {
+    let mut lines_iter = input.lines().map(|line| format!("{}\n", line));
+
+    let first_line: String = lines_iter.next().unwrap();
+    let args: Vec<String> = std::env::args().collect();
+    let system_prompt = if args.len() > 1 {
+        let file_path = &args[1];
+        println!("FILE {:?}", file_path);
+        let mut file = File::open(file_path).unwrap_or_else(|_| {
+            panic!("Failed to open file: {}", file_path);
+        });
+        let mut contents = String::new();
+        file.read_to_string(&mut contents).unwrap();
+        println!("contents {:?}", contents);
+        contents
+    } else {
+        get_default_prompt()
+    };
+
+    match match_separator(&first_line) {
+        None => ChatRequest {
+            system_prompt,
+            transcript: vec![ChatMessage {
                 role: ChatRole::User,
                 content: input,
-            },
-        ],
-        Some(first_role) => parse_transcript(first_role, lines_iter),
+            }],
+        },
+        Some(first_role) => {
+            debug!("First role is {:?}", first_role);
+            let mut transcript = parse_transcript(first_role, lines_iter.collect());
+            let system_prompt = if transcript.get(0).unwrap().role == ChatRole::System {
+                transcript.remove(0).content
+            } else {
+                system_prompt
+            };
+            ChatRequest {
+                system_prompt,
+                transcript,
+            }
+        }
     }
 }
 
-fn parse_transcript(first_role: ChatRole, lines: Lines) -> Vec<ChatMessage> {
+fn parse_transcript(first_role: ChatRole, lines: Vec<String>) -> Vec<ChatMessage> {
     let new_message = |role: ChatRole| ChatMessage {
         role,
         content: String::new(),
     };
-    let initial_messages = if first_role == ChatRole::System {
-        vec![new_message(first_role)]
-    } else {
-        vec![get_prompt(), new_message(first_role)]
-    };
-    lines
-        .into_iter()
-        .fold(initial_messages, |mut acc: Vec<ChatMessage>, line| {
-            match match_separator(line) {
+    lines.into_iter().fold(
+        vec![new_message(first_role)],
+        |mut acc: Vec<ChatMessage>, line| {
+            match match_separator(&line) {
                 Some(role) => acc.push(new_message(role)),
                 None => {
                     let last = acc.last_mut().unwrap();
-                    last.content = format!("{}{}\n", last.content, line)
+                    last.content = format!("{}{}", last.content, line)
                 }
             }
             acc
-        })
+        },
+    )
 }
 
 fn match_separator(line: &str) -> Option<ChatRole> {
-    match line {
+    match line.trim_end() {
         "===SYSTEM===" => Some(ChatRole::System),
         "===USER===" => Some(ChatRole::User),
         "===ASSISTANT===" => Some(ChatRole::Assistant),
